@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>نتائج التحاليل — RÈ-LAB</title>
+<!--
+  RE-LAB-Viewer — صفحة عرض نتائج عامة لكل مختبرات RÈ-LAB (أداة البائع، تُستضاف مرة واحدة).
+  الاستضافة المجانية (مرة واحدة): أنشئ مستودع GitHub → ارفع هذا الملف باسم viewer.html →
+  Settings → Pages → Deploy from branch → الرابط يصير https://USERNAME.github.io/REPO/viewer.html
+  ضع هذا الرابط في برنامج المختبر: الإعدادات ← تصميم الطباعة ← الصفحة ← محتوى الرمز: رابط صفحة.
+  الخصوصية: النتائج تصل هنا بعد علامة # — متصفح الجوال لا يرسل ما بعد # للخادم إطلاقاً،
+  فلا تمر بيانات المرضى على GitHub ولا على أي سيرفر. الصفحة تعمل عرضاً فقط، بلا أي تتبع.
+-->
+<style>
+:root{--ink:#14233b;--mute:#5b6a82;--line:#dbe2ec;--acc:#1d3b6e;--hi:#c4223a;--lo:#b97f00;--soft:#f3f6fb}
+*{box-sizing:border-box}
+body{margin:0;background:#e9eef5;color:var(--ink);font:15px/1.75 "Segoe UI",Tahoma,"Noto Sans Arabic",sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:14px 12px 40px}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 6px 24px rgba(16,33,61,.08)}
+.hd{background:linear-gradient(135deg,#0b2a4f,#1d3b6e);color:#fff;padding:18px 20px}
+.hd h1{margin:0;font-size:21px}
+.hd .sub{opacity:.85;font-size:13px;margin-top:2px}
+.meta{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
+.meta div{background:var(--soft);padding:8px 14px;font-size:13.5px}
+.meta b{display:block;font-size:15px;color:var(--ink)}
+.meta span{color:var(--mute);font-size:12px}
+.body{padding:6px 16px 16px}
+.grp{margin:14px 0 4px;font-weight:800;color:var(--acc);border-bottom:2px solid var(--acc);padding-bottom:3px;font-size:15.5px}
+.panel{margin:10px 0 2px;font-weight:700;color:#334663}
+table{width:100%;border-collapse:collapse}
+td{padding:7px 6px;border-bottom:1px solid #eef2f8;vertical-align:top}
+td.k{width:38%;color:#2a3850}
+td.v{font-weight:700;white-space:nowrap;direction:ltr;text-align:start}
+td.v .fl{font-weight:800;margin-inline-start:4px}
+td.v.hi,.fl.hi{color:var(--hi)}
+td.v.lo,.fl.lo{color:var(--lo)}
+td.r{color:var(--mute);font-size:12.5px;direction:ltr;text-align:start}
+.note{background:#fff8e6;border:1px solid #f1dcA4;border-radius:10px;padding:9px 13px;margin:12px 0;white-space:pre-line}
+.stamp{display:inline-block;background:#fdecee;color:#8a1626;border:1px solid #f4c4cc;border-radius:99px;padding:3px 14px;font-weight:700;font-size:13px;margin:10px 0 0}
+.ver{color:#145c33;background:#e7f6ee;border:1px solid #b9e3ca;border-radius:99px;display:inline-block;padding:3px 14px;font-weight:700;font-size:13px;margin:10px 0 0}
+.bar{display:flex;gap:8px;justify-content:center;margin:16px 0 4px}
+.btn{border:0;border-radius:12px;padding:11px 22px;font:inherit;font-weight:700;cursor:pointer}
+.pri{background:var(--acc);color:#fff}
+.ghost{background:#fff;border:1.5px solid var(--line);color:var(--ink)}
+.empty{padding:26px 20px;text-align:center;color:var(--mute)}
+.empty textarea{width:100%;min-height:90px;margin-top:10px;border:1.5px solid var(--line);border-radius:10px;padding:10px;font:13px/1.5 monospace;direction:ltr}
+footer{text-align:center;color:#8a97ab;font-size:12px;padding:14px 0 0}
+@media print{
+  body{background:#fff}
+  .wrap{max-width:none;padding:0}
+  .card{border:0;box-shadow:none;border-radius:0}
+  .bar,footer{display:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" id="card">
+    <div class="hd"><h1 id="lab">نتائج التحاليل</h1><div class="sub" id="sub"></div></div>
+    <div class="meta" id="meta" style="display:none">
+      <div><span id="L1">المراجع</span><b id="pname"></b></div>
+      <div><span id="L2">رقم الفاتورة · التاريخ</span><b id="pid"></b></div>
+    </div>
+    <div class="body" id="body">
+      <div class="empty" id="empty">
+        <p><b>لا توجد نتائج في الرابط.</b><br>امسح رمز QR من أسفل تقرير النتائج ليفتح هنا تلقائياً.</p>
+        <p style="font-size:12.5px">أو ألصق محتوى الرمز يدوياً:</p>
+        <textarea id="paste" placeholder="RELAB data…"></textarea>
+        <div class="bar"><button class="btn pri" id="go">عرض</button></div>
+      </div>
+      <div id="out"></div>
+    </div>
+  </div>
+  <div class="bar" id="actions" style="display:none">
+    <button class="btn pri" onclick="window.print()">⬇ حفظ PDF / طباعة</button>
+    <button class="btn ghost" onclick="try{navigator.share&&navigator.share({title:document.title,url:location.href})}catch(e){}">مشاركة</button>
+  </div>
+  <footer>RÈ-LAB · النتائج تُعرض داخل جهازك فقط — لا تُرسل لأي خادم</footer>
+</div>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function b64d(s) {
+    s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "=";
+    return decodeURIComponent(escape(atob(s)));
+  }
+  function render(txt) {
+    var lines = String(txt).replace(/\r/g, "").split("\n");
+    if (lines.length < 2) throw new Error("short");
+    $("lab").textContent = lines[0] || "نتائج التحاليل";
+    var m1 = (lines[1] || "").split("|").map(function (x) { return x.trim(); });
+    $("pname").textContent = m1[0] || "—";
+    $("pid").textContent = (m1[1] ? "#" + m1[1] : "") + (m1[2] ? " · " + m1[2] : "");
+    $("sub").textContent = lines[2] || "";
+    $("meta").style.display = "";
+    var h = "", openTbl = false, i, verHtml = "";
+    var openT = function () { if (!openTbl) { h += "<table>"; openTbl = true; } };
+    var closeT = function () { if (openTbl) { h += "</table>"; openTbl = false; } };
+    for (i = 3; i < lines.length; i++) {
+      var ln = lines[i]; if (!ln.trim()) continue;
+      if (ln.slice(0, 2) === "# ") { closeT(); h += '<div class="grp">' + esc(ln.slice(2)) + "</div>"; continue; }
+      if (ln.slice(0, 2) === "* ") { closeT(); h += '<div class="panel">' + esc(ln.slice(2)) + "</div>"; continue; }
+      if (ln.slice(0, 5) === "Note:" || ln.slice(0, 7) === "ملاحظة:") { closeT(); h += '<div class="note">' + esc(ln.replace(/^(Note:|ملاحظة:)\s*/, "")) + "</div>"; continue; }
+      if (ln.slice(0, 2) === "✔ ") { verHtml = '<div class="ver">✔ اعتُمدت من: ' + esc(ln.slice(2)) + "</div>"; continue; }
+      if (ln.indexOf("أولية") >= 0 || ln.indexOf("سەرەتایی") >= 0 || /preliminary/i.test(ln)) { verHtml = '<div class="stamp">' + esc(ln) + "</div>"; continue; }
+      var mm = ln.match(/^(.*?):\s*(.*)$/);
+      if (!mm) { closeT(); h += "<div>" + esc(ln) + "</div>"; continue; }
+      var name = mm[1], rest = mm[2];
+      var range = ""; var rm = rest.match(/\s*\(([^()]*)\)\s*$/);
+      if (rm) { range = rm[1]; rest = rest.slice(0, rm.index); }
+      var fl = ""; var fm = rest.match(/\s(H|L)\s*$/);
+      if (fm) { fl = fm[1]; rest = rest.slice(0, fm.index); }
+      var val = rest.trim();
+      if (/^-(\s|$)/.test(val)) val = "";
+      var cls = fl === "H" ? "hi" : fl === "L" ? "lo" : "";
+      openT();
+      h += "<tr><td class='k'>" + esc(name) + "</td><td class='v " + cls + "'>" + (val === "-" || !val ? "—" : esc(val)) +
+        (fl ? "<span class='fl " + cls + "'>" + (fl === "H" ? "▲ H" : "▼ L") + "</span>" : "") +
+        "</td><td class='r'>" + esc(range) + "</td></tr>";
+    }
+    closeT();
+    $("out").innerHTML = h + verHtml;
+    $("empty").style.display = "none";
+    $("actions").style.display = "";
+    document.title = ($("pname").textContent || "نتائج") + " — " + $("lab").textContent;
+  }
+  function tryShow(raw) {
+    try { render(raw.indexOf("\n") >= 0 ? raw : b64d(raw)); }
+    catch (e) { $("empty").style.display = ""; $("out").innerHTML = ""; alert("تعذّر قراءة المحتوى — تأكد من مسح الرمز كاملاً"); }
+  }
+  var hash = location.hash.slice(1);
+  if (hash) tryShow(hash);
+  $("go").onclick = function () { var v = $("paste").value.trim(); if (v) tryShow(v); };
+})();
+</script>
+</body>
+</html>
